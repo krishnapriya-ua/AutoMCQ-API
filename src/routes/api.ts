@@ -4,9 +4,7 @@ import videoController from '../controllers/controller';
 
 const router = express.Router();
 
-
 router.post('/upload', upload.single('video'), videoController.handleVideoUpload);
-
-// router.get('/text', videoController.getText);
+router.post('/text', upload.single('video'), videoController.getText); 
 
 export default router;

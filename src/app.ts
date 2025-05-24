@@ -2,6 +2,8 @@ import express from "express";
 import { createServer } from "http";
 import cors from 'cors'
 import apiRoutes from './routes/api'
+import dotenv from 'dotenv'
+dotenv.config()
 
 const app = express();
 app.use(cors())
