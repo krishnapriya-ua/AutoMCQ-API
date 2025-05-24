@@ -3,6 +3,7 @@ import { GoogleGenerativeAI, FileDataPart } from '@google/generative-ai';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 import fs from 'fs';
 import dotenv from 'dotenv'
+import Mcq from '../model/mcq';
 dotenv.config()
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -31,6 +32,14 @@ const handleVideoUpload = (req: Request, res: Response, next:NextFunction):void 
 const getText = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     console.log("Received request to /text"); 
+    const sessionId = req.body.sessionId;
+    const videoName = req.body.videoName;
+
+    if (!sessionId || !videoName) {
+      res.status(400).json({ error: 'Missing sessionId or videoName' });
+      return;
+    }
+
     if (!req.file || !req.file.path || !req.file.mimetype) {
       console.log("No video file provided or file data missing");
       res.status(400).json({ error: 'No video file provided or file data missing.' });
@@ -90,14 +99,36 @@ const getText = async (req: Request, res: Response, next: NextFunction): Promise
       console.error('Failed to delete file:', err);
     }
 
-    res.status(200).json({ text });
+    const saved = await Mcq.create({
+      sessionId,
+      videoName,
+      generatedText: text,
+    });
+
+    res.status(200).json({ text ,saved });
   } catch (error) {
     console.error('Error in getText:', error); 
     res.status(500).json({ error: 'Failed to generate text from video.' });
   }
 };
 
+const getMCQ = async (req : Request, res : Response, next : NextFunction): Promise<void> =>{
+  try {
+    const sessionId = req.query.sessionId as string
+    if(!sessionId){
+      res.status(400).json({message:'No session id available'})
+      return
+    }
+    const data = await Mcq.find({sessionId}).sort({createdAt:-1})
+    res.json({data})
+  } catch (error) {
+    console.log(error)
+    res.json({error:'Error fetching data'})
+  }
+}
+
 export default {
   handleVideoUpload,
-   getText
+   getText,
+   getMCQ
 };
