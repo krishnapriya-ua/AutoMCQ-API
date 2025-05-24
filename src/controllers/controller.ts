@@ -12,6 +12,8 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 const fileManager = new GoogleAIFileManager(apiKey)
 
+
+
 const handleVideoUpload = (req: Request, res: Response, next:NextFunction):void => {
   if (!req.file) {
      res.status(400).json({ success: false, message: 'No video is there' });
@@ -39,14 +41,14 @@ const getText = async (req: Request, res: Response, next: NextFunction): Promise
     const mimeType = req.file.mimetype;
     console.log(`Uploading file: ${req.file.filename}, MIME type: ${mimeType}`); 
 
-    // Upload file to Gemini
+   
     const uploadResponse = await fileManager.uploadFile(filePath, {
       mimeType,
       displayName: req.file.filename,
     });
     console.log(`File uploaded to Gemini: ${uploadResponse.file.uri}`); 
 
-    // Poll to check if the file is ready
+    
     let file = await fileManager.getFile(uploadResponse.file.name);
     console.log(`Initial file state: ${file.state}`); 
     while (file.state === FileState.PROCESSING) {
@@ -59,7 +61,7 @@ const getText = async (req: Request, res: Response, next: NextFunction): Promise
       throw new Error('Video processing failed.');
     }
 
-    // Generate content
+   
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     console.log("Generating content with Gemini"); // Log content generation
     const result = await model.generateContent([
@@ -70,25 +72,27 @@ const getText = async (req: Request, res: Response, next: NextFunction): Promise
         },
       },
       {
-        text: 'Summarize this video. Then create a quiz with an answer key based on the information in this video.',
+      text: `Transcribe the spoken content of this video into **English**, even if the original audio is in another language like Hindi. 
+        Split the transcription into chunks of every 5 minutes (but only up to the video's total length). 
+        For each 5-minute chunk, generate a few multiple-choice questions (each with 4 options and an answer key) **based strictly on that chunk**. `
       },
     ]);
 
     const response = await result.response;
     const text = response.text();
-    console.log("Generated text:", text); // Log generated text
+    console.log("Generated text:", text); 
 
-    // Clean up uploaded file
+    
     try {
       fs.unlinkSync(filePath);
-      console.log(`Deleted local file: ${filePath}`); // Log file deletion
+      console.log(`Deleted local file: ${filePath}`); 
     } catch (err) {
       console.error('Failed to delete file:', err);
     }
 
     res.status(200).json({ text });
   } catch (error) {
-    console.error('Error in getText:', error); // Log detailed error
+    console.error('Error in getText:', error); 
     res.status(500).json({ error: 'Failed to generate text from video.' });
   }
 };
